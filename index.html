@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Grid</title>
+<title>webangelboy</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -491,18 +491,18 @@
   /* ── Gate flowers ── */
   const flowers = ['🌸','🌺','🌼','🌻','🌷','💐','🪷','🌹','🤍','❤️','💗','💓','💕'];
   const gateFlowers = document.getElementById('gateFlowers');
-  // Evenly distribute flowers in a 4×6 grid with slight random offset
-  const cols = 4, rows = 6;
+  // Evenly distribute flowers in a 4×6 grid with larger random offset
+  const cols = 4, rows = 7;
   const flowerList = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       flowerList.push({
-        x: (c / cols * 100) + (100 / cols / 2) + (Math.random() * 10 - 5),
-        y: (r / rows * 100) + (100 / rows / 2) + (Math.random() * 10 - 5),
+        x: (c / cols * 100) + (100 / cols / 2) + (Math.random() * 16 - 8),
+        y: (r / rows * 100) + (100 / rows / 2) + (Math.random() * 16 - 8),
       });
     }
   }
-  // Shuffle to randomise which emoji goes where
+  // Shuffle
   for (let k = flowerList.length - 1; k > 0; k--) {
     const j = Math.floor(Math.random() * (k + 1));
     [flowerList[k], flowerList[j]] = [flowerList[j], flowerList[k]];
@@ -524,7 +524,7 @@
   });
 
   // 2 big accent flowers
-  [{x: 15, y: 22}, {x: 78, y: 68}].forEach(({x, y}) => {
+  [{x: 5, y: 8}, {x: 82, y: 78}].forEach(({x, y}) => {
     const el = document.createElement('span');
     el.textContent = flowers[Math.floor(Math.random() * flowers.length)];
     const rot = Math.round(Math.random() * 360);
@@ -554,6 +554,24 @@
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('bgMusic').play().catch(() => {});
+
+    // ── Silent log to Google Sheets ──
+    const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeQkXiXLBixJcw8v-qH3F56SRN41D_d5cesY6FF46AGGJ8ufA/formResponse';
+    const now = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
+    const device = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop';
+    const browser = (() => {
+      const ua = navigator.userAgent;
+      if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
+      if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
+      if (/Firefox/i.test(ua)) return 'Firefox';
+      if (/Edg/i.test(ua)) return 'Edge';
+      return 'Other';
+    })();
+    const data = new FormData();
+    data.append('entry.1421294842', now);
+    data.append('entry.1442762282', device);
+    data.append('entry.267932966', browser);
+    fetch(formUrl, { method: 'POST', body: data, mode: 'no-cors' }).catch(() => {});
   });
 
   /* ── Video sources ── */
@@ -814,6 +832,22 @@
     swipeDx = 0;
   });
 
+  /* ── Lazy poster loader ── */
+  const posterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const tile = entry.target;
+      const vid = tile.querySelector('video[data-poster]');
+      if (vid) {
+        vid.poster = vid.dataset.poster;
+        vid.src = vid.dataset.src;
+        delete vid.dataset.poster;
+        delete vid.dataset.src;
+      }
+      posterObserver.unobserve(tile);
+    });
+  }, { rootMargin: '200px' }); // load 200px before tile enters screen
+
   /* ── Grid ── */
   const order = [...Array(98).keys()];
 
@@ -827,17 +861,20 @@
       const filledIdx = filledSrcs.findIndex(x => x.index === slotIndex);
 
       const thumb = document.createElement('video');
-      thumb.src = src;
       thumb.muted = true;
       thumb.loop = true;
       thumb.playsInline = true;
       thumb.preload = 'none';
-      // Generate thumbnail from Cloudinary by replacing video URL with image
+      // Generate poster URL but don't set it yet — lazy load on scroll
       const poster = src
-        .replace('/video/upload/', '/video/upload/so_0,q_auto,f_jpg/')
+        .replace('/video/upload/', '/video/upload/so_0,q_auto,f_jpg,w_400/')
         .replace(/\.(mp4|mov|webm)$/i, '.jpg');
-      thumb.poster = poster;
+      thumb.dataset.src = src;
+      thumb.dataset.poster = poster;
       div.appendChild(thumb);
+
+      // Lazy load poster + src when tile enters viewport
+      posterObserver.observe(div);
 
       // Big play button — opens lightbox on tap
       const bigPlay = document.createElement('div');

@@ -16,7 +16,7 @@
   }
 
   /* ── Age gate ── */
-   #gate {
+  #gate {
     position: fixed;
     inset: 0;
     background: #fff;
@@ -34,24 +34,24 @@
     pointer-events: none;
     z-index: 0;
   }
- 
- .gate-flowers span {
+
+  .gate-flowers span {
     position: absolute;
     image-rendering: pixelated;
     user-select: none;
     animation: slowDrift ease-in-out infinite alternate, blurPulse ease-in-out infinite alternate;
   }
- 
+
   @keyframes slowDrift {
     0%   { transform: translateX(0px)       translateY(0px)      rotate(var(--r)); }
     100% { transform: translateX(var(--dx)) translateY(var(--dy)) rotate(var(--r)); }
   }
- 
+
   @keyframes blurPulse {
     0%   { filter: blur(var(--blur1)) saturate(1.8); opacity: var(--op1); }
     100% { filter: blur(var(--blur2)) saturate(1.4); opacity: var(--op2); }
   }
- 
+
   .gate-card {
     position: relative;
     z-index: 1;
@@ -68,7 +68,7 @@
     padding: 36px 28px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.06);
   }
- 
+
   .gate-icon {
     width: 80px;
     height: 80px;
@@ -78,32 +78,32 @@
     align-items: center;
     justify-content: center;
   }
- 
+
   .gate-icon svg {
     width: 80px;
     height: 80px;
   }
- 
+
   .gate-text {
     text-align: center;
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
- 
+
   .gate-text h1 {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.4px;
     color: #111;
   }
- 
+
   .gate-text p {
     font-size: 14px;
     color: #888;
     line-height: 1.5;
   }
- 
+
   .gate-checkbox-row {
     display: flex;
     align-items: flex-start;
@@ -111,7 +111,7 @@
     width: 100%;
     cursor: pointer;
   }
- 
+
   .gate-checkbox-row input[type="checkbox"] {
     width: 20px;
     height: 20px;
@@ -120,14 +120,14 @@
     accent-color: #111;
     cursor: pointer;
   }
- 
+
   .gate-checkbox-row label {
     font-size: 14px;
     color: #444;
     line-height: 1.5;
     cursor: pointer;
   }
- 
+
   .gate-btn {
     width: 100%;
     padding: 15px;
@@ -141,16 +141,17 @@
     cursor: pointer;
     transition: opacity 0.2s;
   }
- 
+
   .gate-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   .gate-btn:not(:disabled):active { opacity: 0.75; }
- 
+
   .gate-error {
     font-size: 12px;
     color: #c0392b;
     text-align: center;
     min-height: 16px;
   }
+
   /* ── App ── */
   #app { display: none; }
 
@@ -432,7 +433,7 @@
 <!-- Background music -->
 <audio id="bgMusic" src="audio/music.mp3" loop preload="none"></audio>
 
-<!--  gate -->
+<!-- Age gate -->
 <div id="gate">
   <div class="gate-flowers" id="gateFlowers"></div>
   <div class="gate-card">
@@ -450,12 +451,12 @@
       </svg>
     </div>
     <div class="gate-text">
-      <h1>Верифікація Віку</h1>
-      <p style="font-size: 13px;">Цей контент призначений виключно для дорослих. Будь ласка, підтвердьте свій вік, перш ніж продовжувати.</p>
+      <h1>Age Verification</h1>
+      <p>This content is intended for adults only. Please confirm your age before continuing.</p>
     </div>
     <label class="gate-checkbox-row">
       <input type="checkbox" id="ageCheck">
-      <label for="ageCheck">Мені виповнилося 18 років. Я усвідомлюю, що далі можу побачити відвертий візуальний матеріал, який містить оголене тіло та сексуальні дії.</label>
+      <label for="ageCheck">I confirm that I am 18 years of age or older</label>
     </label>
     <div class="gate-error" id="gateError"></div>
     <button class="gate-btn" id="gateBtn" disabled>Enter</button>
@@ -485,7 +486,7 @@
 <!-- Main app -->
 <div id="app">
   <div class="feed" id="feed"></div>
-   <footer style="padding: 32px 20px 48px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
+  <footer style="padding: 32px 20px 48px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
     <p style="font-size: 11px; color: #bbb; letter-spacing: 0.04em;">© webangelboy. All rights reserved.</p>
     <a href="https://send.monobank.ua/jar/7AvYwuWfL5" target="_blank" style="font-size: 11px; color: #ccc; text-decoration: none; letter-spacing: 0.02em;">Посилання на банку</a>
   </footer>
@@ -512,34 +513,53 @@
     [flowerList[k], flowerList[j]] = [flowerList[j], flowerList[k]];
   }
 
-  flowerList.forEach(({ x, y }, idx) => {
+  flowerList.forEach(({ x, y }) => {
     const el = document.createElement('span');
     el.textContent = flowers[Math.floor(Math.random() * flowers.length)];
-    const rot = Math.round(Math.random() * 360);
+    const rot   = Math.round(Math.random() * 360);
+    const blur1 = (1 + Math.random() * 2).toFixed(1);
+    const blur2 = (6 + Math.random() * 8).toFixed(1);
+    const op1   = (0.65 + Math.random() * 0.3).toFixed(2);
+    const op2   = (0.3  + Math.random() * 0.2).toFixed(2);
+    const driftDur = (8  + Math.random() * 8) + 's';
+    const blurDur  = (5  + Math.random() * 7) + 's';
     el.style.left = x + '%';
     el.style.top  = y + '%';
     el.style.fontSize = (42 + Math.random() * 50) + 'px';
-    el.style.filter = `blur(${3 + Math.random() * 3}px) saturate(1.8)`;
-    el.style.opacity = 0.75 + Math.random() * 0.25;
-    el.style.setProperty('--r', rot + 'deg');
-    el.style.animationDuration = (4 + Math.random() * 5) + 's';
-    el.style.animationDelay = (-Math.random() * 6) + 's';
+    el.style.setProperty('--r',     rot   + 'deg');
+    el.style.setProperty('--dx',    (Math.random() * 30 - 15) + 'px');
+    el.style.setProperty('--dy',    (Math.random() * 20 - 10) + 'px');
+    el.style.setProperty('--blur1', blur1 + 'px');
+    el.style.setProperty('--blur2', blur2 + 'px');
+    el.style.setProperty('--op1',   op1);
+    el.style.setProperty('--op2',   op2);
+    el.style.animationDuration = `${driftDur}, ${blurDur}`;
+    el.style.animationDelay    = `${-Math.random() * 10}s, ${-Math.random() * 8}s`;
     gateFlowers.appendChild(el);
   });
 
-  // 2 big accent flowers
   [{x: 5, y: 8}, {x: 82, y: 78}].forEach(({x, y}) => {
     const el = document.createElement('span');
     el.textContent = flowers[Math.floor(Math.random() * flowers.length)];
-    const rot = Math.round(Math.random() * 360);
+    const rot   = Math.round(Math.random() * 360);
+    const blur1 = (2 + Math.random() * 2).toFixed(1);
+    const blur2 = (8 + Math.random() * 8).toFixed(1);
+    const op1   = (0.7  + Math.random() * 0.25).toFixed(2);
+    const op2   = (0.35 + Math.random() * 0.2).toFixed(2);
+    const driftDur = (12 + Math.random() * 8) + 's';
+    const blurDur  = (7  + Math.random() * 6) + 's';
     el.style.left = x + '%';
     el.style.top  = y + '%';
     el.style.fontSize = (130 + Math.random() * 60) + 'px';
-    el.style.filter = `blur(${4 + Math.random() * 3}px) saturate(2)`;
-    el.style.opacity = 0.7 + Math.random() * 0.25;
-    el.style.setProperty('--r', rot + 'deg');
-    el.style.animationDuration = (6 + Math.random() * 4) + 's';
-    el.style.animationDelay = (-Math.random() * 4) + 's';
+    el.style.setProperty('--r',     rot   + 'deg');
+    el.style.setProperty('--dx',    (Math.random() * 20 - 10) + 'px');
+    el.style.setProperty('--dy',    (Math.random() * 16 - 8)  + 'px');
+    el.style.setProperty('--blur1', blur1 + 'px');
+    el.style.setProperty('--blur2', blur2 + 'px');
+    el.style.setProperty('--op1',   op1);
+    el.style.setProperty('--op2',   op2);
+    el.style.animationDuration = `${driftDur}, ${blurDur}`;
+    el.style.animationDelay    = `${-Math.random() * 8}s, ${-Math.random() * 6}s`;
     gateFlowers.appendChild(el);
   });
 

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Grid</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  /* ── Age gate ── */
+  #gate {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+  }
+
+  .gate-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .gate-icon {
+    width: 56px;
+    height: 56px;
+    background: #f2f2f2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gate-icon svg {
+    width: 26px;
+    height: 26px;
+    stroke: #555;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .gate-text {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gate-text h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: #111;
+  }
+
+  .gate-text p {
+    font-size: 14px;
+    color: #888;
+    line-height: 1.5;
+  }
+
+  .gate-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  .gate-checkbox-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    accent-color: #111;
+    cursor: pointer;
+  }
+
+  .gate-checkbox-row label {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.5;
+    cursor: pointer;
+  }
+
+  .gate-btn {
+    width: 100%;
+    padding: 15px;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .gate-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .gate-btn:not(:disabled):active { opacity: 0.75; }
+
+  .gate-error {
+    font-size: 12px;
+    color: #c0392b;
+    text-align: center;
+    min-height: 16px;
+  }
+
+  /* ── App ── */
+  #app { display: none; }
+
+  .feed {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .row { display: flex; gap: 14px; }
+
+  .tile {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #e8e8e8;
+    border-radius: 12px;
+  }
+
+  .tile video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Placeholder shown while src not yet set */
+  .tile .placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ebebeb;
+  }
+
+  .tile .placeholder svg {
+    width: 28px;
+    height: 28px;
+    stroke: #bbb;
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .row.single .tile { height: 320px; }
+  .row.double .tile { height: 220px; }
+  .row.double .tile.tall { height: 260px; align-self: flex-start; }
+
+  /* Slot number label */
+  .slot-label {
+    position: absolute;
+    bottom: 9px;
+    left: 9px;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    pointer-events: none;
+  }
+
+  /* ── Video player overlay ── */
+  .player-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    cursor: pointer;
+    background: linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .tile:hover .player-overlay,
+  .tile.controls-visible .player-overlay {
+    opacity: 1;
+  }
+
+  .player-controls {
+    padding: 8px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .player-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .btn-playpause {
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .btn-playpause svg {
+    width: 14px;
+    height: 14px;
+    fill: #fff;
+    stroke: none;
+  }
+
+  .time-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.04em;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 2px;
+    width: 0%;
+    pointer-events: none;
+  }
+
+  /* Mute button */
+  #muteBtn {
+    display: none;
+    position: fixed;
+    bottom: 28px;
+    right: 20px;
+    z-index: 50;
+    width: 42px;
+    height: 42px;
+    background: rgba(0,0,0,0.55);
+    border-radius: 50%;
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Background music -->
+<audio id="bgMusic" src="audio/music.mp3" loop preload="none"></audio>
+
+<!-- Mute toggle -->
+<div id="muteBtn">
+  <svg id="iconSound" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </svg>
+  <svg id="iconMute" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+  </svg>
+</div>
+
+<!-- Age gate -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <div class="gate-text">
+      <h1>Age Verification</h1>
+      <p>This content is intended for adults only. Please confirm your age before continuing.</p>
+    </div>
+    <label class="gate-checkbox-row">
+      <input type="checkbox" id="ageCheck">
+      <label for="ageCheck">I confirm that I am 18 years of age or older</label>
+    </label>
+    <div class="gate-error" id="gateError"></div>
+    <button class="gate-btn" id="gateBtn" disabled>Enter</button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+  <div class="feed" id="feed"></div>
+</div>
+
+<script>
+  /* ── Age gate ── */
+  const check = document.getElementById('ageCheck');
+  const btn   = document.getElementById('gateBtn');
+  const err   = document.getElementById('gateError');
+
+  check.addEventListener('change', () => {
+    btn.disabled = !check.checked;
+    err.textContent = '';
+  });
+
+  btn.addEventListener('click', () => {
+    if (!check.checked) { err.textContent = 'Please confirm you are 18 or older.'; return; }
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('bgMusic').play().catch(() => {});
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.style.display = 'flex';
+    muteBtn.addEventListener('click', () => {
+      const audio = document.getElementById('bgMusic');
+      audio.muted = !audio.muted;
+      document.getElementById('iconSound').style.display = audio.muted ? 'none' : 'block';
+      document.getElementById('iconMute').style.display  = audio.muted ? 'block' : 'none';
+    });
+  });
+
+  /* ── Video sources — replace with your Google Drive links ──
+     Format: https://drive.google.com/uc?export=download&id=YOUR_FILE_ID
+     Leave as empty string '' for slots you haven't filled yet.       */
+  const SRCS = [
+    /* 001 */ 'https://res.cloudinary.com/dw5ovtiwp/video/upload/v1780428434/%D0%BF%D0%B0%D1%86_%D0%B7%D0%B0%D0%BC%D1%96%D0%BD%D0%B0_1_dez4xy.mov',
+    /* 002 */ 'https://res.cloudinary.com/dw5ovtiwp/video/upload/v1780434018/%D0%BF%D0%B0%D1%86_%D0%B7%D0%B0%D0%BC%D1%96%D0%BD%D0%B0_2_xvrh5w.mov',
+    /* 003 */ '',
+    /* 004 */ '',
+    /* 005 */ '',
+    /* 006 */ '',
+    /* 007 */ '',
+    /* 008 */ '',
+    /* 009 */ '',
+    /* 010 */ '',
+    /* 011 */ '',
+    /* 012 */ '',
+    /* 013 */ '',
+    /* 014 */ '',
+    /* 015 */ '',
+    /* 016 */ '',
+    /* 017 */ '',
+    /* 018 */ '',
+    /* 019 */ '',
+    /* 020 */ '',
+    /* 021 */ '',
+    /* 022 */ '',
+    /* 023 */ '',
+    /* 024 */ '',
+    /* 025 */ '',
+    /* 026 */ '',
+    /* 027 */ '',
+    /* 028 */ '',
+    /* 029 */ '',
+    /* 030 */ '',
+    /* 031 */ '',
+    /* 032 */ '',
+    /* 033 */ '',
+    /* 034 */ '',
+    /* 035 */ '',
+    /* 036 */ '',
+    /* 037 */ '',
+    /* 038 */ '',
+    /* 039 */ '',
+    /* 040 */ '',
+    /* 041 */ '',
+    /* 042 */ '',
+    /* 043 */ '',
+    /* 044 */ '',
+    /* 045 */ '',
+    /* 046 */ '',
+    /* 047 */ '',
+    /* 048 */ '',
+    /* 049 */ '',
+    /* 050 */ '',
+    /* 051 */ '',
+    /* 052 */ '',
+    /* 053 */ '',
+    /* 054 */ '',
+    /* 055 */ '',
+    /* 056 */ '',
+    /* 057 */ '',
+    /* 058 */ '',
+    /* 059 */ '',
+    /* 060 */ '',
+    /* 061 */ '',
+    /* 062 */ '',
+    /* 063 */ '',
+    /* 064 */ '',
+    /* 065 */ '',
+    /* 066 */ '',
+    /* 067 */ '',
+    /* 068 */ '',
+    /* 069 */ '',
+    /* 070 */ '',
+    /* 071 */ '',
+    /* 072 */ '',
+    /* 073 */ '',
+    /* 074 */ '',
+    /* 075 */ '',
+    /* 076 */ '',
+    /* 077 */ '',
+    /* 078 */ '',
+    /* 079 */ '',
+    /* 080 */ '',
+    /* 081 */ '',
+    /* 082 */ '',
+    /* 083 */ '',
+    /* 084 */ '',
+    /* 085 */ '',
+    /* 086 */ '',
+    /* 087 */ '',
+    /* 088 */ '',
+    /* 089 */ '',
+    /* 090 */ '',
+    /* 091 */ '',
+    /* 092 */ '',
+    /* 093 */ '',
+    /* 094 */ '',
+    /* 095 */ '',
+    /* 096 */ '',
+    /* 097 */ '',
+    /* 098 */ '',
+    /* 099 */ '',
+  ];
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // Slots displayed in order 001 → 099
+  const order = [...Array(99).keys()];
+
+  function makeTile(slotIndex) {
+    const src = SRCS[slotIndex];
+    const div = document.createElement('div');
+    div.className = 'tile';
+
+    if (src) {
+      const vid = document.createElement('video');
+      vid.src = src;
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      vid.preload = 'none';
+      div.appendChild(vid);
+
+      // ── Big centered play button (shown when paused) ──
+      const bigPlay = document.createElement('div');
+      bigPlay.style.cssText = `
+        position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+        background:rgba(0,0,0,0.18); cursor:pointer; transition:opacity 0.2s;
+      `;
+      bigPlay.innerHTML = `
+        <div style="width:48px;height:48px;background:rgba(255,255,255,0.85);border-radius:50%;
+          display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#111"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>`;
+      div.appendChild(bigPlay);
+
+      // ── Bottom controls (progress + time, shown when playing) ──
+      const overlay = document.createElement('div');
+      overlay.className = 'player-overlay';
+      overlay.style.opacity = '0';
+
+      const controls = document.createElement('div');
+      controls.className = 'player-controls';
+
+      const top = document.createElement('div');
+      top.className = 'player-top';
+
+      const playBtn = document.createElement('button');
+      playBtn.className = 'btn-playpause';
+      playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+
+      const timeLabel = document.createElement('span');
+      timeLabel.className = 'time-label';
+      timeLabel.textContent = '0:00';
+
+      top.appendChild(playBtn);
+      top.appendChild(timeLabel);
+
+      const progressWrap = document.createElement('div');
+      progressWrap.className = 'progress-wrap';
+      const progressFill = document.createElement('div');
+      progressFill.className = 'progress-fill';
+      progressWrap.appendChild(progressFill);
+
+      controls.appendChild(top);
+      controls.appendChild(progressWrap);
+      overlay.appendChild(controls);
+      div.appendChild(overlay);
+
+      let hideTimer;
+      function showControls() {
+        overlay.style.opacity = '1';
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => { if (!vid.paused) overlay.style.opacity = '0'; }, 2000);
+      }
+
+      function startPlay() {
+        vid.play();
+        bigPlay.style.display = 'none';
+        overlay.style.opacity = '1';
+        showControls();
+      }
+
+      function togglePlay(e) {
+        e.stopPropagation();
+        if (vid.paused) {
+          startPlay();
+          playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+        } else {
+          vid.pause();
+          bigPlay.style.display = 'flex';
+          overlay.style.opacity = '1';
+          playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+        }
+      }
+
+      bigPlay.addEventListener('click', startPlay);
+      playBtn.addEventListener('click', togglePlay);
+      div.addEventListener('click', (e) => { if (!vid.paused) showControls(); });
+
+      vid.addEventListener('timeupdate', () => {
+        if (!vid.duration) return;
+        progressFill.style.width = (vid.currentTime / vid.duration * 100) + '%';
+        const s = Math.floor(vid.currentTime);
+        timeLabel.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+      });
+
+      progressWrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = progressWrap.getBoundingClientRect();
+        vid.currentTime = ((e.clientX - rect.left) / rect.width) * vid.duration;
+        showControls();
+      });
+
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'placeholder';
+      ph.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`;
+      div.appendChild(ph);
+    }
+
+    const lbl = document.createElement('span');
+    lbl.className = 'slot-label';
+    lbl.textContent = String(slotIndex + 1).padStart(3, '0');
+    div.appendChild(lbl);
+
+    return div;
+  }
+
+  const feed = document.getElementById('feed');
+  let i = 0;
+
+  while (i < order.length) {
+    const remaining = order.length - i;
+    const goSingle = remaining === 1 || Math.random() < 0.3;
+    const row = document.createElement('div');
+
+    if (goSingle) {
+      row.className = 'row single';
+      row.appendChild(makeTile(order[i]));
+      i += 1;
+    } else {
+      row.className = 'row double';
+      const t1 = makeTile(order[i]);
+      const t2 = makeTile(order[i + 1]);
+      if (Math.random() < 0.4) t1.classList.add('tall');
+      else if (Math.random() < 0.4) t2.classList.add('tall');
+      row.appendChild(t1);
+      row.appendChild(t2);
+      i += 2;
+    }
+
+    feed.appendChild(row);
+  }
+</script>
+</body>
+</html>

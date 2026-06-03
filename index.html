@@ -34,22 +34,24 @@
     pointer-events: none;
     z-index: 0;
   }
-
+ 
   .gate-flowers span {
     position: absolute;
-    filter: blur(3px) saturate(1.5);
-    im-rendering: pixelated;
-    opacity: 0.7;
+    image-rendering: pixelated;
     user-select: none;
-    animation: floatFlower linear infinite;
+    animation: slowDrift ease-in-out infinite alternate, blurPulse ease-in-out infinite alternate;
   }
-
-  @keyframes floatFlower {
-    0%   { transform: translateY(0px)   rotate(var(--r)); }
-    50%  { transform: translateY(-18px) rotate(var(--r)); }
-    100% { transform: translateY(0px)   rotate(var(--r)); }
+ 
+  @keyframes slowDrift {
+    0%   { transform: translateX(0px)       translateY(0px)      rotate(var(--r)); }
+    100% { transform: translateX(var(--dx)) translateY(var(--dy)) rotate(var(--r)); }
   }
-
+ 
+  @keyframes blurPulse {
+    0%   { filter: blur(var(--blur1)) saturate(1.8); opacity: var(--op1); }
+    100% { filter: blur(var(--blur2)) saturate(1.4); opacity: var(--op2); }
+  }
+ 
   .gate-card {
     position: relative;
     z-index: 1;
@@ -66,7 +68,7 @@
     padding: 36px 28px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.06);
   }
-
+ 
   .gate-icon {
     width: 80px;
     height: 80px;
@@ -76,32 +78,32 @@
     align-items: center;
     justify-content: center;
   }
-
+ 
   .gate-icon svg {
     width: 80px;
     height: 80px;
   }
-
+ 
   .gate-text {
     text-align: center;
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
-
+ 
   .gate-text h1 {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.4px;
     color: #111;
   }
-
+ 
   .gate-text p {
     font-size: 14px;
     color: #888;
     line-height: 1.5;
   }
-
+ 
   .gate-checkbox-row {
     display: flex;
     align-items: flex-start;
@@ -109,7 +111,7 @@
     width: 100%;
     cursor: pointer;
   }
-
+ 
   .gate-checkbox-row input[type="checkbox"] {
     width: 20px;
     height: 20px;
@@ -118,14 +120,14 @@
     accent-color: #111;
     cursor: pointer;
   }
-
+ 
   .gate-checkbox-row label {
     font-size: 14px;
     color: #444;
     line-height: 1.5;
     cursor: pointer;
   }
-
+ 
   .gate-btn {
     width: 100%;
     padding: 15px;
@@ -139,10 +141,10 @@
     cursor: pointer;
     transition: opacity 0.2s;
   }
-
+ 
   .gate-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   .gate-btn:not(:disabled):active { opacity: 0.75; }
-
+ 
   .gate-error {
     font-size: 12px;
     color: #c0392b;

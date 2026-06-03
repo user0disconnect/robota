@@ -38,7 +38,7 @@
   .gate-flowers span {
     position: absolute;
     filter: blur(3px) saturate(1.5);
-    image-rendering: pixelated;
+    im-rendering: pixelated;
     opacity: 0.7;
     user-select: none;
     animation: floatFlower linear infinite;
@@ -431,7 +431,7 @@
 <!-- Background music -->
 <audio id="bgMusic" src="audio/music.mp3" loop preload="none"></audio>
 
-<!-- Age gate -->
+<!--  gate -->
 <div id="gate">
   <div class="gate-flowers" id="gateFlowers"></div>
   <div class="gate-card">
@@ -449,12 +449,12 @@
       </svg>
     </div>
     <div class="gate-text">
-      <h1>Age Verification</h1>
-      <p>This content is intended for adults only. Please confirm your age before continuing.</p>
+      <h1>Підтвердження Віку</h1>
+      <p>Цей контент призначений виключно для дорослих. Будь ласка, підтвердьте свій вік, перш ніж продовжувати.</p>
     </div>
     <label class="gate-checkbox-row">
       <input type="checkbox" id="ageCheck">
-      <label for="ageCheck">I confirm that I am 18 years of age or older</label>
+      <label for="ageCheck">Мені виповнилося 18 років. Я усвідомлюю, що далі можу побачити відвертий візуальний матеріал, який містить оголене тіло та сексуальні дії.</label>
     </label>
     <div class="gate-error" id="gateError"></div>
     <button class="gate-btn" id="gateBtn" disabled>Enter</button>

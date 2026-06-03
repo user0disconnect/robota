@@ -303,10 +303,9 @@
   #lightbox.open { display: flex; align-items: center; }
 
   .lb-track {
-    display: flex;
+    position: relative;
     width: 100%;
     height: 100%;
-    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .lb-slide {
@@ -680,52 +679,72 @@
   // Only filled slots go into carousel
   const filledSrcs = SRCS.map((s, i) => ({ src: s, index: i })).filter(x => x.src);
 
-  /* ── Lightbox ── */
-  const lightbox   = document.getElementById('lightbox');
-  const lbTrack    = document.getElementById('lbTrack');
-  const lbClose    = document.getElementById('lbClose');
-  const lbCounter  = document.getElementById('lbCounter');
-  const lbPlayBtn  = document.getElementById('lbPlayBtn');
-  const lbTime     = document.getElementById('lbTime');
+  /* ── Lightbox — on-demand slides ── */
+  const lightbox       = document.getElementById('lightbox');
+  const lbTrack        = document.getElementById('lbTrack');
+  const lbClose        = document.getElementById('lbClose');
+  const lbCounter      = document.getElementById('lbCounter');
+  const lbPlayBtn      = document.getElementById('lbPlayBtn');
+  const lbTime         = document.getElementById('lbTime');
   const lbProgressWrap = document.getElementById('lbProgressWrap');
   const lbProgressFill = document.getElementById('lbProgressFill');
-  const lbControlsBar  = document.getElementById('lbControlsBar');
 
   let lbIndex = 0;
-  let lbVids = [];
   let lbHideTimer;
+  // Cache of created slide elements keyed by filledSrc index
+  const lbSlideCache = {};
 
-  // Build slides once
-  filledSrcs.forEach(({ src }) => {
+  function getOrCreateSlide(idx) {
+    if (lbSlideCache[idx]) return lbSlideCache[idx];
+    const { src } = filledSrcs[idx];
     const slide = document.createElement('div');
     slide.className = 'lb-slide';
+    slide.style.cssText = `position:absolute;top:0;left:${idx * 100}%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;`;
     const vid = document.createElement('video');
     vid.src = src;
     vid.loop = true;
     vid.muted = true;
     vid.playsInline = true;
-    vid.preload = 'none';
+    vid.preload = 'metadata';
+    vid.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+    vid.addEventListener('timeupdate', () => {
+      if (idx !== lbIndex || !vid.duration) return;
+      lbProgressFill.style.width = (vid.currentTime / vid.duration * 100) + '%';
+      const s = Math.floor(vid.currentTime);
+      lbTime.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    });
     slide.appendChild(vid);
     lbTrack.appendChild(slide);
-    lbVids.push(vid);
-  });
+    lbSlideCache[idx] = { slide, vid };
+    return lbSlideCache[idx];
+  }
 
-  function lbCurrentVid() { return lbVids[lbIndex]; }
+  function lbCurrentVid() {
+    return lbSlideCache[lbIndex] ? lbSlideCache[lbIndex].vid : null;
+  }
 
   function lbGoTo(idx, animate = true) {
     lbIndex = Math.max(0, Math.min(idx, filledSrcs.length - 1));
+    // Pre-create current + neighbours
+    [-1, 0, 1].forEach(offset => {
+      const i = lbIndex + offset;
+      if (i >= 0 && i < filledSrcs.length) getOrCreateSlide(i);
+    });
     lbTrack.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none';
     lbTrack.style.transform = `translateX(-${lbIndex * 100}%)`;
     lbCounter.textContent = `${lbIndex + 1} / ${filledSrcs.length}`;
-    // Pause all, play current
-    lbVids.forEach((v, i) => { if (i !== lbIndex) v.pause(); });
+    // Pause neighbours, play current
+    Object.entries(lbSlideCache).forEach(([i, { vid }]) => {
+      if (parseInt(i) !== lbIndex) vid.pause();
+    });
     const cur = lbCurrentVid();
-    cur.play().catch(() => {});
+    if (cur) cur.play().catch(() => {});
     lbUpdateControls();
   }
 
   function lbUpdateControls() {
     const cur = lbCurrentVid();
+    if (!cur) return;
     lbPlayBtn.innerHTML = cur.paused
       ? `<svg viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
       : `<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
@@ -745,40 +764,28 @@
   }
 
   function closeLightbox() {
-    lbVids.forEach(v => v.pause());
-    lightbox.classList.remove('open');
-    lightbox.classList.remove('show-controls');
+    // Pause all cached videos
+    Object.values(lbSlideCache).forEach(({ vid }) => vid.pause());
+    lightbox.classList.remove('open', 'show-controls');
     document.body.style.overflow = '';
   }
 
   lbClose.addEventListener('click', closeLightbox);
-
   lightbox.addEventListener('click', (e) => {
     if (e.target === lightbox || e.target.tagName === 'VIDEO') lbShowControls();
   });
-
   lbPlayBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const cur = lbCurrentVid();
+    if (!cur) return;
     cur.paused ? cur.play() : cur.pause();
     lbUpdateControls();
     lbShowControls();
   });
-
-  // Progress update
-  lbVids.forEach((vid) => {
-    vid.addEventListener('timeupdate', () => {
-      if (vid !== lbCurrentVid() || !vid.duration) return;
-      lbProgressFill.style.width = (vid.currentTime / vid.duration * 100) + '%';
-      const s = Math.floor(vid.currentTime);
-      lbTime.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-    });
-  });
-
   lbProgressWrap.addEventListener('click', (e) => {
     e.stopPropagation();
     const cur = lbCurrentVid();
-    if (!cur.duration) return;
+    if (!cur || !cur.duration) return;
     const rect = lbProgressWrap.getBoundingClientRect();
     cur.currentTime = ((e.clientX - rect.left) / rect.width) * cur.duration;
     lbShowControls();
@@ -786,50 +793,33 @@
 
   /* ── Swipe ── */
   let swipeStartX = 0, swipeStartY = 0, swipeDx = 0, isHorizontal = null;
-
   lightbox.addEventListener('touchstart', (e) => {
     swipeStartX = e.touches[0].clientX;
     swipeStartY = e.touches[0].clientY;
-    swipeDx = 0;
-    isHorizontal = null;
+    swipeDx = 0; isHorizontal = null;
     lbTrack.style.transition = 'none';
   }, { passive: true });
-
   lightbox.addEventListener('touchmove', (e) => {
     const dx = e.touches[0].clientX - swipeStartX;
     const dy = e.touches[0].clientY - swipeStartY;
-
-    if (isHorizontal === null) {
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        isHorizontal = Math.abs(dx) > Math.abs(dy);
-      }
-    }
-
+    if (isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5))
+      isHorizontal = Math.abs(dx) > Math.abs(dy);
     if (isHorizontal) {
       e.preventDefault();
       swipeDx = dx;
-      const base = lbIndex * 100;
-      const offset = (swipeDx / window.innerWidth) * 100;
-      lbTrack.style.transform = `translateX(calc(-${base}% + ${swipeDx}px))`;
+      lbTrack.style.transform = `translateX(calc(-${lbIndex * 100}% + ${swipeDx}px))`;
     }
   }, { passive: false });
-
   lightbox.addEventListener('touchend', () => {
     if (isHorizontal) {
-      if (swipeDx < -50 && lbIndex < filledSrcs.length - 1) {
-        lbGoTo(lbIndex + 1);
-      } else if (swipeDx > 50 && lbIndex > 0) {
-        lbGoTo(lbIndex - 1);
-      } else {
-        // Snap back
+      if (swipeDx < -50 && lbIndex < filledSrcs.length - 1) lbGoTo(lbIndex + 1);
+      else if (swipeDx > 50 && lbIndex > 0) lbGoTo(lbIndex - 1);
+      else {
         lbTrack.style.transition = 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)';
         lbTrack.style.transform = `translateX(-${lbIndex * 100}%)`;
       }
-    } else {
-      lbShowControls();
-    }
-    isHorizontal = null;
-    swipeDx = 0;
+    } else lbShowControls();
+    isHorizontal = null; swipeDx = 0;
   });
 
   /* ── Lazy poster loader ── */
@@ -846,86 +836,88 @@
       }
       posterObserver.unobserve(tile);
     });
-  }, { rootMargin: '200px' }); // load 200px before tile enters screen
+  }, { rootMargin: '300px' });
 
-  /* ── Grid ── */
+  /* ── Infinite scroll grid ── */
   const order = [...Array(98).keys()];
+  const BATCH = 20;
+  let gridCursor = 0;
+  const feed = document.getElementById('feed');
 
   function makeTile(slotIndex) {
     const src = SRCS[slotIndex];
     const div = document.createElement('div');
     div.className = 'tile';
-
     if (src) {
-      // Find index in filledSrcs for lightbox
       const filledIdx = filledSrcs.findIndex(x => x.index === slotIndex);
-
       const thumb = document.createElement('video');
-      thumb.muted = true;
-      thumb.loop = true;
-      thumb.playsInline = true;
-      thumb.preload = 'none';
-      // Generate poster URL but don't set it yet — lazy load on scroll
+      thumb.muted = true; thumb.loop = true;
+      thumb.playsInline = true; thumb.preload = 'none';
       const poster = src
         .replace('/video/upload/', '/video/upload/so_0,q_auto,f_jpg,w_400/')
         .replace(/\.(mp4|mov|webm)$/i, '.jpg');
       thumb.dataset.src = src;
       thumb.dataset.poster = poster;
       div.appendChild(thumb);
-
-      // Lazy load poster + src when tile enters viewport
       posterObserver.observe(div);
-
-      // Big play button — opens lightbox on tap
       const bigPlay = document.createElement('div');
-      bigPlay.style.cssText = `position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-        background:rgba(0,0,0,0.18);cursor:pointer;`;
-      bigPlay.innerHTML = `<div style="width:48px;height:48px;background:rgba(255,255,255,0.85);border-radius:50%;
-        display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="#111"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </div>`;
+      bigPlay.style.cssText = `position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.18);cursor:pointer;`;
+      bigPlay.innerHTML = `<div style="width:48px;height:48px;background:rgba(255,255,255,0.85);border-radius:50%;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="20" height="20" fill="#111"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
       div.appendChild(bigPlay);
-
       bigPlay.addEventListener('click', () => openLightbox(filledIdx));
       div.addEventListener('click', () => openLightbox(filledIdx));
-
     } else {
       const ph = document.createElement('div');
       ph.className = 'placeholder';
       ph.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>`;
       div.appendChild(ph);
     }
-
     const lbl = document.createElement('span');
     lbl.className = 'slot-label';
     lbl.textContent = String(slotIndex + 1).padStart(3, '0');
     div.appendChild(lbl);
-
     return div;
   }
 
-  const feed = document.getElementById('feed');
-  let i = 0;
-  while (i < order.length) {
-    const remaining = order.length - i;
-    const goSingle = remaining === 1 || Math.random() < 0.3;
-    const row = document.createElement('div');
-    if (goSingle) {
-      row.className = 'row single';
-      row.appendChild(makeTile(order[i]));
-      i += 1;
-    } else {
-      row.className = 'row double';
-      const t1 = makeTile(order[i]);
-      const t2 = makeTile(order[i + 1]);
-      if (Math.random() < 0.4) t1.classList.add('tall');
-      else if (Math.random() < 0.4) t2.classList.add('tall');
-      row.appendChild(t1);
-      row.appendChild(t2);
-      i += 2;
+  function loadBatch() {
+    const end = Math.min(gridCursor + BATCH, order.length);
+    let i = gridCursor;
+    while (i < end) {
+      const remaining = end - i;
+      const goSingle = remaining === 1 || Math.random() < 0.3;
+      const row = document.createElement('div');
+      if (goSingle) {
+        row.className = 'row single';
+        row.appendChild(makeTile(order[i]));
+        i += 1;
+      } else {
+        row.className = 'row double';
+        const t1 = makeTile(order[i]);
+        const t2 = makeTile(order[i + 1]);
+        if (Math.random() < 0.4) t1.classList.add('tall');
+        else if (Math.random() < 0.4) t2.classList.add('tall');
+        row.appendChild(t1);
+        row.appendChild(t2);
+        i += 2;
+      }
+      feed.appendChild(row);
     }
-    feed.appendChild(row);
+    gridCursor = i;
   }
+
+  // Load first batch immediately
+  loadBatch();
+
+  // Load more when user nears bottom
+  const scrollObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && gridCursor < order.length) loadBatch();
+  }, { rootMargin: '400px' });
+
+  // Sentinel element at bottom of feed
+  const sentinel = document.createElement('div');
+  sentinel.style.height = '1px';
+  feed.appendChild(sentinel);
+  scrollObserver.observe(sentinel);
 </script>
 </body>
 </html>

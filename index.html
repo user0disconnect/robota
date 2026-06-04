@@ -866,7 +866,7 @@
   }, { rootMargin: '300px' });
 
   /* ── Infinite scroll grid ── */
-  const order = [...Array(96).keys()].sort(() => Math.random() - 0.5);
+  const order = [...Array(96).keys()];
   const BATCH = 30;
   let gridCursor = 0;
   const feed = document.getElementById('feed');

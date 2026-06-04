@@ -867,7 +867,7 @@
 
   /* ── Infinite scroll grid ── */
   const order = [...Array(98).keys()];
-  const BATCH = 20;
+  const BATCH = 30;
   let gridCursor = 0;
   const feed = document.getElementById('feed');
 
@@ -938,13 +938,20 @@
   // Load more when user nears bottom
   const scrollObserver = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting && gridCursor < order.length) loadBatch();
-  }, { rootMargin: '400px' });
+  }, { rootMargin: '800px' });
 
   // Sentinel element at bottom of feed
   const sentinel = document.createElement('div');
   sentinel.style.height = '1px';
   feed.appendChild(sentinel);
   scrollObserver.observe(sentinel);
+
+  // Fallback: also load on scroll in case observer misses
+  window.addEventListener('scroll', () => {
+    if (gridCursor >= order.length) return;
+    const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+    if (scrollTop + clientHeight >= scrollHeight - 600) loadBatch();
+  }, { passive: true });
 </script>
 </body>
 </html>
